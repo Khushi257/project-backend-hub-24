@@ -103,16 +103,18 @@ export const ProductCard = ({ product, onAddToCart, onToggleWishlist }: ProductC
             <Package className="h-20 w-20 text-muted-foreground" />
           </div>
         )}
-        {discount > 0 && (
-          <Badge className="absolute top-2 left-2 bg-red-500">
-            {discount}% OFF
-          </Badge>
-        )}
-        {product.is_local && (
-          <Badge className="absolute top-2 left-2 bg-green-500 text-white" style={{ marginTop: discount > 0 ? '32px' : '0' }}>
-            Fast Delivery
-          </Badge>
-        )}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {discount > 0 && (
+            <Badge className="bg-red-500 text-white">
+              {discount}% OFF
+            </Badge>
+          )}
+          {product.is_local && (
+            <Badge className="bg-green-500 text-white">
+              Fast Delivery
+            </Badge>
+          )}
+        </div>
         {onToggleWishlist && (
           <div className="absolute top-2 right-2">
             <Button

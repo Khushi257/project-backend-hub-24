@@ -11,6 +11,7 @@ import { CartSheet } from "@/components/customer/CartSheet";
 import { ProductCard } from "@/components/customer/ProductCard";
 import { CategoryFilter } from "@/components/customer/CategoryFilter";
 import { UserProfileMenu } from "@/components/customer/UserProfileMenu";
+import { LocationPrompt } from "@/components/customer/LocationPrompt";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type Product = {
@@ -360,6 +361,9 @@ const CustomerDashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
+        {/* Location Prompt */}
+        {!userCity && <LocationPrompt onLocationSet={fetchUserCity} />}
+        
         <div className="flex gap-6">
           {/* Filters Sidebar */}
           <ProductFilters

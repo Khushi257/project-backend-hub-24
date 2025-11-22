@@ -108,6 +108,11 @@ export const ProductCard = ({ product, onAddToCart, onToggleWishlist }: ProductC
             {discount}% OFF
           </Badge>
         )}
+        {product.is_local && (
+          <Badge className="absolute top-2 left-2 bg-green-500 text-white" style={{ marginTop: discount > 0 ? '32px' : '0' }}>
+            Fast Delivery
+          </Badge>
+        )}
         {onToggleWishlist && (
           <div className="absolute top-2 right-2">
             <Button
@@ -121,16 +126,6 @@ export const ProductCard = ({ product, onAddToCart, onToggleWishlist }: ProductC
               />
             </Button>
           </div>
-        )}
-        {product.is_local && (
-          <>
-            <Badge className="absolute top-2 left-2 bg-green-500 text-white">
-              Fast Delivery
-            </Badge>
-            <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-green-600">
-              Delivery by Tomorrow
-            </div>
-          </>
         )}
         {product.stock_quantity < 10 && (
           <Badge className="absolute bottom-2 right-2 bg-orange-500">

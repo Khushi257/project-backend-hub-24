@@ -97,7 +97,7 @@ export const ProductFilters = ({
               htmlFor="fast-delivery"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
             >
-              Fast Delivery (1 day)
+              Fast Delivery (by tomorrow)
             </label>
           </div>
         </div>

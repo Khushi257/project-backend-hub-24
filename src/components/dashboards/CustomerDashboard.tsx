@@ -12,6 +12,7 @@ import { ProductCard } from "@/components/customer/ProductCard";
 import { CategoryFilter } from "@/components/customer/CategoryFilter";
 import { UserProfileMenu } from "@/components/customer/UserProfileMenu";
 import { LocationPrompt } from "@/components/customer/LocationPrompt";
+import { AIChatbox } from "@/components/customer/AIChatbox";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type Product = {
@@ -440,6 +441,7 @@ const CustomerDashboard = () => {
           </div>
         </div>
       </main>
+      <AIChatbox />
     </div>
   );
 };

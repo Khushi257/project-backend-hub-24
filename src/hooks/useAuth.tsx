@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type UserRole = "customer" | "retailer" | "wholesaler";
+export type UserRole = "customer" | "retailer" | "wholesaler" | "admin";
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -11,12 +11,10 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
         if (session?.user) {
           fetchUserRoles(session.user.id);
         } else {
@@ -26,11 +24,9 @@ export const useAuth = () => {
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
       if (session?.user) {
         fetchUserRoles(session.user.id);
       } else {
@@ -47,9 +43,7 @@ export const useAuth = () => {
         .from("user_roles")
         .select("role")
         .eq("user_id", userId);
-
       if (error) throw error;
-      
       setRoles(data.map((r) => r.role as UserRole));
     } catch (error) {
       console.error("Error fetching roles:", error);
@@ -65,19 +59,11 @@ export const useAuth = () => {
     } catch (error) {
       console.error("Sign out error:", error);
     } finally {
-      // Always redirect to auth page regardless of errors
       window.location.href = "/auth";
     }
   };
 
   const hasRole = (role: UserRole) => roles.includes(role);
 
-  return {
-    user,
-    session,
-    roles,
-    loading,
-    signOut,
-    hasRole,
-  };
+  return { user, session, roles, loading, signOut, hasRole };
 };

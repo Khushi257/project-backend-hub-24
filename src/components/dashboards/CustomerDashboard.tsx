@@ -1,447 +1,186 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { LogOut, Package, Heart, Search, ShoppingBag } from "lucide-react";
-import { toast } from "sonner";
-import { ProductFilters } from "@/components/customer/ProductFilters";
-import { CartSheet } from "@/components/customer/CartSheet";
-import { ProductCard } from "@/components/customer/ProductCard";
-import { CategoryFilter } from "@/components/customer/CategoryFilter";
-import { UserProfileMenu } from "@/components/customer/UserProfileMenu";
-import { LocationPrompt } from "@/components/customer/LocationPrompt";
-import { AIChatbox } from "@/components/customer/AIChatbox";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Film, Search, LogOut, Star, Clock, Ticket, Calendar } from "lucide-react";
 
-type Product = {
+type Movie = {
   id: string;
-  name: string;
+  title: string;
   description: string | null;
-  price: number;
-  mrp: number | null;
-  discount_percentage: number | null;
-  stock_quantity: number;
-  image_url: string | null;
-  is_local: boolean | null;
-  category_id: string | null;
-  categories: { name: string } | null;
-  seller_id: string;
-  seller_city?: string | null;
-};
-
-type Category = {
-  id: string;
-  name: string;
-  count: number;
+  genre: string;
+  duration_minutes: number;
+  rating: number;
+  poster_url: string | null;
+  release_date: string | null;
+  language: string;
+  status: string;
 };
 
 const CustomerDashboard = () => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [movies, setMovies] = useState<Movie[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategoryName, setSelectedCategoryName] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
-  const [sortBy, setSortBy] = useState("newest");
+  const [selectedGenre, setSelectedGenre] = useState("");
   const [loading, setLoading] = useState(true);
-  const [cartCount, setCartCount] = useState(0);
-  const [fastDeliveryOnly, setFastDeliveryOnly] = useState(false);
-  const [userCity, setUserCity] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      fetchUserCity();
-      fetchProducts();
-      fetchCategories();
-      fetchCartCount();
-    }
-  }, [user]);
+    fetchMovies();
+  }, []);
 
-  const fetchUserCity = async () => {
-    if (!user) return;
+  const fetchMovies = async () => {
     try {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("city")
-        .eq("id", user.id)
-        .single();
-      
-      if (error) throw error;
-      setUserCity(data?.city || null);
-    } catch (error: any) {
-      console.error("Error fetching user city:", error);
-    }
-  };
-
-  // Handle URL category parameter
-  useEffect(() => {
-    const categoryParam = searchParams.get('category');
-    if (categoryParam && categories.length > 0) {
-      const category = categories.find(c => c.name.toLowerCase() === categoryParam.toLowerCase());
-      if (category) {
-        setSelectedCategories([category.id]);
-        setSelectedCategoryName(category.name);
-      }
-    }
-  }, [searchParams, categories]);
-
-  const fetchProducts = async () => {
-    try {
-      // Get retailer user IDs
-      const { data: retailerRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "retailer");
-
-      if (rolesError) throw rolesError;
-
-      const retailerIds = retailerRoles.map((r) => r.user_id);
-
-      if (retailerIds.length === 0) {
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("products")
-        .select(`
-          *,
-          categories(name)
-        `)
-        .in("seller_id", retailerIds)
-        .gt("stock_quantity", 0)
+        .from("movies")
+        .select("*")
+        .eq("status", "now_showing")
         .order("created_at", { ascending: false });
-
       if (error) throw error;
-      
-      // Fetch retailer cities
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("id, city")
-        .in("id", retailerIds);
-      
-      const cityMap = new Map(profilesData?.map(p => [p.id, p.city]) || []);
-      
-      const enrichedProducts = (data || []).map(product => {
-        const sellerCity = cityMap.get(product.seller_id) || null;
-        return {
-          ...product,
-          seller_city: sellerCity,
-          is_local: userCity && sellerCity ? sellerCity.toLowerCase() === userCity.toLowerCase() : false
-        };
-      });
-      
-      setProducts(enrichedProducts);
-    } catch (error: any) {
-      toast.error(error.message);
+      setMovies(data || []);
+    } catch (error) {
+      console.error("Error fetching movies:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const { data: categoryData, error } = await supabase
-        .from("categories")
-        .select("id, name");
+  const genres = [...new Set(movies.map((m) => m.genre))];
 
-      if (error) throw error;
-
-      // Count products per category
-      const categoriesWithCount = await Promise.all(
-        (categoryData || []).map(async (cat) => {
-          const { count } = await supabase
-            .from("products")
-            .select("*", { count: "exact", head: true })
-            .eq("category_id", cat.id)
-            .gt("stock_quantity", 0);
-
-          return { ...cat, count: count || 0 };
-        })
-      );
-
-      setCategories(categoriesWithCount.filter((c) => c.count > 0));
-    } catch (error: any) {
-      console.error(error);
-    }
-  };
-
-  const fetchCartCount = async () => {
-    if (!user) return;
-    try {
-      const { count, error } = await supabase
-        .from("cart")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-      setCartCount(count || 0);
-    } catch (error: any) {
-      console.error(error);
-    }
-  };
-
-  const addToCart = async (productId: string) => {
-    if (!user) return;
-    
-    try {
-      const { data: existingItem } = await supabase
-        .from("cart")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("product_id", productId)
-        .maybeSingle();
-
-      if (existingItem) {
-        const { error } = await supabase
-          .from("cart")
-          .update({ quantity: existingItem.quantity + 1 })
-          .eq("id", existingItem.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("cart")
-          .insert({ user_id: user.id, product_id: productId, quantity: 1 });
-
-        if (error) throw error;
-      }
-
-      toast.success("Added to cart!");
-      fetchCartCount();
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-
-  const toggleWishlist = async (productId: string) => {
-    if (!user) return;
-    try {
-      const { data: existing } = await supabase
-        .from("wishlist")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("product_id", productId)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from("wishlist")
-          .delete()
-          .eq("id", existing.id);
-        if (error) throw error;
-        toast.success("Removed from wishlist");
-      } else {
-        const { error } = await supabase
-          .from("wishlist")
-          .insert({ user_id: user.id, product_id: productId });
-        if (error) throw error;
-        toast.success("Added to wishlist");
-      }
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-
-  const handleCategoryToggle = (categoryId: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
-    );
-  };
-
-  const handleTopCategorySelect = (categoryName: string) => {
-    setSelectedCategoryName(categoryName);
-    const category = categories.find(c => c.name === categoryName);
-    if (category) {
-      setSelectedCategories([category.id]);
-      setSearchParams({ category: categoryName.toLowerCase() });
-    } else {
-      setSelectedCategories([]);
-      setSearchParams({});
-    }
-  };
-
-  const maxPrice = Math.max(...products.map((p) => p.price), 50000);
-
-  // Initialize price range to full range when products load
-  useEffect(() => {
-    if (products.length > 0) {
-      setPriceRange([0, maxPrice]);
-    }
-  }, [products, maxPrice]);
-
-  const filteredProducts = products
-    .filter((product) => {
-      // Search filter
-      const matchesSearch =
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Category filter
-      const matchesCategory =
-        selectedCategories.length === 0 ||
-        (product.category_id && selectedCategories.includes(product.category_id));
-
-      // Price filter
-      const matchesPrice =
-        product.price >= priceRange[0] && product.price <= priceRange[1];
-
-      // Fast delivery filter
-      const matchesFastDelivery = !fastDeliveryOnly || 
-        (userCity && product.seller_city?.toLowerCase() === userCity.toLowerCase());
-
-      return matchesSearch && matchesCategory && matchesPrice && matchesFastDelivery;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "price-low":
-          return a.price - b.price;
-        case "price-high":
-          return b.price - a.price;
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "newest":
-        default:
-          return 0;
-      }
-    });
+  const filteredMovies = movies.filter((movie) => {
+    const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      movie.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesGenre = !selectedGenre || movie.genre === selectedGenre;
+    return matchesSearch && matchesGenre;
+  });
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Welcome Banner */}
-      <div className="bg-primary text-primary-foreground py-12">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Welcome to Live Mart</h1>
-          <p className="text-lg opacity-90">Discover amazing products from local retailers</p>
+      {/* Hero Banner */}
+      <div className="relative h-[350px] overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-[hsl(0,30%,10%)] to-black" />
+        <div className="absolute inset-0 opacity-30" style={{
+          backgroundImage: 'radial-gradient(circle at 30% 40%, hsl(0, 85%, 40%) 0%, transparent 60%), radial-gradient(circle at 70% 60%, hsl(40, 80%, 40%) 0%, transparent 50%)'
+        }} />
+        <div className="relative z-10 container mx-auto px-4 h-full flex flex-col justify-center">
+          <h1 className="text-6xl md:text-7xl font-bold tracking-wider mb-2">Now Showing</h1>
+          <p className="text-xl text-muted-foreground max-w-lg">Book your seats for the latest blockbusters. Experience cinema like never before.</p>
         </div>
       </div>
 
       {/* Header */}
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
+      <header className="border-b border-border/50 sticky top-0 bg-background/95 backdrop-blur z-50">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <ShoppingBag className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold">Live MART</h1>
+            <Film className="h-7 w-7 text-primary" />
+            <span className="text-3xl font-bold tracking-wider">CineBook</span>
           </div>
-            <div className="flex items-center gap-3">
-              <div className="relative w-96">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <UserProfileMenu />
-              <Button variant="ghost" size="icon" onClick={() => navigate("/wishlist")}>
-                <Heart className="h-5 w-5" />
-              </Button>
-              {user && (
-                <CartSheet userId={user.id} cartCount={cartCount} onCartUpdate={fetchCartCount} />
-              )}
+          <div className="flex items-center gap-4">
+            <div className="relative w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search movies..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-muted/50"
+              />
             </div>
-          </div>
-          <div className="flex items-center justify-center">
-            <CategoryFilter 
-              onCategorySelect={handleTopCategorySelect} 
-              selectedCategory={selectedCategoryName}
-            />
+            <Button variant="outline" size="sm" onClick={() => navigate("/my-bookings")}>
+              <Ticket className="mr-2 h-4 w-4" /> My Bookings
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => signOut()}>
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        {/* Location Prompt */}
-        {!userCity && <LocationPrompt onLocationSet={fetchUserCity} />}
-        
-        <div className="flex gap-6">
-          {/* Filters Sidebar */}
-          <ProductFilters
-            categories={categories}
-            selectedCategories={selectedCategories}
-            onCategoryChange={handleCategoryToggle}
-            priceRange={priceRange}
-            onPriceRangeChange={setPriceRange}
-            maxPrice={maxPrice}
-            fastDeliveryOnly={fastDeliveryOnly}
-            onFastDeliveryChange={setFastDeliveryOnly}
-            userCity={userCity}
-          />
-
-          {/* Products Section */}
-          <div className="flex-1">
-            {/* Sort and Results Count */}
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing {filteredProducts.length} of {products.length} products
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Sort by:</span>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="name">Name: A to Z</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Products Grid */}
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading products...</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredProducts.map((product) => {
-                  const isFastDelivery = userCity && product.seller_city?.toLowerCase() === userCity.toLowerCase();
-                  return (
-                    <ProductCard
-                      key={product.id}
-                      product={{
-                        ...product,
-                        is_local: isFastDelivery || product.is_local
-                      }}
-                      onAddToCart={addToCart}
-                      onToggleWishlist={toggleWishlist}
-                    />
-                  );
-                })}
-              </div>
-            )}
-
-            {!loading && filteredProducts.length === 0 && (
-              <div className="text-center py-12">
-                <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-xl text-muted-foreground">No products found</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Try adjusting your filters or search query
-                </p>
-              </div>
-            )}
-          </div>
+      <main className="container mx-auto px-4 py-8">
+        {/* Genre Filter */}
+        <div className="flex gap-2 mb-8 flex-wrap">
+          <Button
+            variant={selectedGenre === "" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedGenre("")}
+            className="rounded-full"
+          >
+            All
+          </Button>
+          {genres.map((genre) => (
+            <Button
+              key={genre}
+              variant={selectedGenre === genre ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedGenre(genre)}
+              className="rounded-full"
+            >
+              {genre}
+            </Button>
+          ))}
         </div>
+
+        {/* Movies Grid */}
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {filteredMovies.map((movie) => (
+              <Card
+                key={movie.id}
+                className="group cursor-pointer overflow-hidden border-border/30 bg-card hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(0,85%,50%,0.3)]"
+                onClick={() => navigate(`/movie/${movie.id}`)}
+              >
+                <div className="aspect-[2/3] relative overflow-hidden bg-muted">
+                  {movie.poster_url ? (
+                    <img src={movie.poster_url} alt={movie.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-secondary/20">
+                      <Film className="h-16 w-16 text-muted-foreground/50" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Badge className="absolute top-2 right-2 bg-secondary text-secondary-foreground">
+                    {movie.genre}
+                  </Badge>
+                </div>
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-lg mb-1 line-clamp-1" style={{ fontFamily: 'Inter, sans-serif' }}>{movie.title}</h3>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Star className="h-3.5 w-3.5 text-secondary fill-secondary" />
+                      {Number(movie.rating).toFixed(1)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      {movie.duration_minutes}m
+                    </span>
+                  </div>
+                  {movie.release_date && (
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(movie.release_date).toLocaleDateString()}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {!loading && filteredMovies.length === 0 && (
+          <div className="text-center py-20">
+            <Film className="h-20 w-20 text-muted-foreground/30 mx-auto mb-4" />
+            <p className="text-2xl text-muted-foreground tracking-wider">No movies found</p>
+            <p className="text-muted-foreground mt-2">Check back later for new releases</p>
+          </div>
+        )}
       </main>
-      <AIChatbox />
     </div>
   );
 };

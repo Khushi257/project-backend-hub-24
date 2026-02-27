@@ -14,6 +14,79 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_seats: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          seat_col: number
+          seat_label: string
+          seat_row: number
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          seat_col: number
+          seat_label: string
+          seat_row: number
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          seat_col?: number
+          seat_label?: string
+          seat_row?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_seats_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          created_at: string
+          id: string
+          payment_method: string | null
+          showtime_id: string
+          status: string | null
+          total_amount: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payment_method?: string | null
+          showtime_id: string
+          status?: string | null
+          total_amount: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payment_method?: string | null
+          showtime_id?: string
+          status?: string | null
+          total_amount?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_showtime_id_fkey"
+            columns: ["showtime_id"]
+            isOneToOne: false
+            referencedRelation: "showtimes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cart: {
         Row: {
           created_at: string | null
@@ -125,6 +198,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      movies: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          genre: string
+          id: string
+          language: string | null
+          poster_url: string | null
+          rating: number | null
+          release_date: string | null
+          status: string | null
+          title: string
+          trailer_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes: number
+          genre: string
+          id?: string
+          language?: string | null
+          poster_url?: string | null
+          rating?: number | null
+          release_date?: string | null
+          status?: string | null
+          title: string
+          trailer_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          genre?: string
+          id?: string
+          language?: string | null
+          poster_url?: string | null
+          rating?: number | null
+          release_date?: string | null
+          status?: string | null
+          title?: string
+          trailer_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       order_items: {
         Row: {
@@ -382,6 +503,116 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          movie_id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          movie_id: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          movie_id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      showtimes: {
+        Row: {
+          available_seats: number
+          created_at: string
+          id: string
+          movie_id: string
+          price: number
+          show_date: string
+          show_time: string
+          theater_id: string
+        }
+        Insert: {
+          available_seats?: number
+          created_at?: string
+          id?: string
+          movie_id: string
+          price?: number
+          show_date: string
+          show_time: string
+          theater_id: string
+        }
+        Update: {
+          available_seats?: number
+          created_at?: string
+          id?: string
+          movie_id?: string
+          price?: number
+          show_date?: string
+          show_time?: string
+          theater_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "showtimes_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "showtimes_theater_id_fkey"
+            columns: ["theater_id"]
+            isOneToOne: false
+            referencedRelation: "theaters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      theaters: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          screen_type: string | null
+          seats_per_row: number
+          total_rows: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          screen_type?: string | null
+          seats_per_row?: number
+          total_rows?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          screen_type?: string | null
+          seats_per_row?: number
+          total_rows?: number
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

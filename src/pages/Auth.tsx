@@ -8,9 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { ShoppingBag } from "lucide-react";
+import { Film, Clapperboard, Shield } from "lucide-react";
 
-type UserRole = "customer" | "retailer" | "wholesaler";
+type UserRole = "customer" | "admin";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -19,70 +19,28 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [selectedRole, setSelectedRole] = useState<UserRole>("customer");
-  const [otp, setOtp] = useState("");
-  const [city, setCity] = useState("");
-  const [showOtpStep, setShowOtpStep] = useState(false);
-  const [showCityStep, setShowCityStep] = useState(false);
-  const [tempUserData, setTempUserData] = useState<any>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/");
-      }
+      if (session) navigate("/");
     });
   }, [navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!showOtpStep) {
-      // First step: collect email, password, name, role - then show OTP
-      setShowOtpStep(true);
-      setLoading(false);
-      return;
-    }
-    
-    if (!showCityStep && (selectedRole === "customer" || selectedRole === "retailer")) {
-      // Second step: verify OTP (we accept any OTP) - then show city for customer/retailer
-      setShowCityStep(true);
-      setLoading(false);
-      return;
-    }
-    
-    // Final step: create account
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
+        options: { data: { full_name: fullName } },
       });
-
       if (error) throw error;
-
       if (data.user) {
-        // Insert user role
         const { error: roleError } = await supabase
           .from("user_roles")
           .insert({ user_id: data.user.id, role: selectedRole });
-
         if (roleError) throw roleError;
-
-        // Update profile with city for customers and retailers
-        if ((selectedRole === "customer" || selectedRole === "retailer") && city) {
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .update({ city: city })
-            .eq("id", data.user.id);
-
-          if (profileError) console.error("Error updating city:", profileError);
-        }
-
         toast.success("Account created successfully!");
         navigate("/");
       }
@@ -96,16 +54,10 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-
-      toast.success("Signed in successfully!");
+      toast.success("Welcome back!");
       navigate("/");
     } catch (error: any) {
       toast.error(error.message);
@@ -115,18 +67,27 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Cinematic background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-[hsl(0,20%,8%)] to-black" />
+      <div className="absolute inset-0 opacity-20" style={{
+        backgroundImage: 'radial-gradient(circle at 20% 50%, hsl(0, 85%, 50%) 0%, transparent 50%), radial-gradient(circle at 80% 20%, hsl(40, 90%, 55%) 0%, transparent 40%)'
+      }} />
+      
+      <Card className="w-full max-w-md relative z-10 border-border/50 bg-card/80 backdrop-blur-xl">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <ShoppingBag className="h-12 w-12 text-primary" />
+            <div className="relative">
+              <Film className="h-14 w-14 text-primary" />
+              <div className="absolute -inset-2 bg-primary/20 rounded-full blur-lg" />
+            </div>
           </div>
-          <CardTitle className="text-3xl">Live MART</CardTitle>
-          <CardDescription>Online Delivery System</CardDescription>
+          <CardTitle className="text-5xl tracking-wider">CineBook</CardTitle>
+          <CardDescription className="text-muted-foreground text-base">Movie Ticket Booking System</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 bg-muted/50">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
@@ -135,27 +96,13 @@ const Auth = () => {
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+                  <Input id="signin-email" type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                  <Input id="signin-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
@@ -163,95 +110,41 @@ const Auth = () => {
 
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
-                {!showOtpStep && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-name">Full Name</Label>
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="John Doe"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        required
-                      />
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Input id="signup-name" type="text" placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input id="signup-email" type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input id="signup-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                </div>
+                <div className="space-y-3">
+                  <Label>Account Type</Label>
+                  <RadioGroup value={selectedRole} onValueChange={(value) => setSelectedRole(value as UserRole)}>
+                    <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
+                      <RadioGroupItem value="customer" id="customer" />
+                      <Clapperboard className="h-5 w-5 text-secondary" />
+                      <Label htmlFor="customer" className="font-normal cursor-pointer flex-1">
+                        <span className="font-medium">Customer</span>
+                        <p className="text-xs text-muted-foreground">Browse & book movie tickets</p>
+                      </Label>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email</Label>
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="your@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
+                    <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
+                      <RadioGroupItem value="admin" id="admin" />
+                      <Shield className="h-5 w-5 text-primary" />
+                      <Label htmlFor="admin" className="font-normal cursor-pointer flex-1">
+                        <span className="font-medium">Admin</span>
+                        <p className="text-xs text-muted-foreground">Manage movies, theaters & bookings</p>
+                      </Label>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Password</Label>
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength={6}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>I am a</Label>
-                      <RadioGroup value={selectedRole} onValueChange={(value) => setSelectedRole(value as UserRole)}>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="customer" id="customer" />
-                          <Label htmlFor="customer" className="font-normal cursor-pointer">Customer</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="retailer" id="retailer" />
-                          <Label htmlFor="retailer" className="font-normal cursor-pointer">Retailer</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="wholesaler" id="wholesaler" />
-                          <Label htmlFor="wholesaler" className="font-normal cursor-pointer">Wholesaler</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </>
-                )}
-                
-                {showOtpStep && !showCityStep && (
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-otp">Enter OTP</Label>
-                    <Input
-                      id="signup-otp"
-                      type="text"
-                      placeholder="Enter any OTP"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      required
-                      maxLength={6}
-                    />
-                    <p className="text-xs text-muted-foreground">For demo purposes, enter any 6-digit code</p>
-                  </div>
-                )}
-                
-                {showCityStep && (
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-city">City</Label>
-                    <Input
-                      id="signup-city"
-                      type="text"
-                      placeholder="Enter your city"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      required
-                    />
-                    <p className="text-xs text-muted-foreground">This helps us show fast delivery options</p>
-                  </div>
-                )}
-                
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account..." : showCityStep ? "Complete Sign Up" : showOtpStep ? "Verify OTP" : "Continue"}
+                  </RadioGroup>
+                </div>
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
+                  {loading ? "Creating account..." : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
